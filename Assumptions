@@ -1,0 +1,6 @@
+1. Key Vault with Key stored (CMK)
+2. Network is placed VNET,subnet,NSG,etc.
+3. Admin ID is already available in Azure AD with Directory reader permissions.
+4. RG is already available to use.
+5. Azure SPN or user has sufficient rights to intract with Azure Services.
+6. World will take climate change seriously.

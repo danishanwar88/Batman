@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "sqlServerName": {
+      "value": "SQLMIVM"
+    },
+    "aad_admin_name": {
+      "value": "ADADMIN"
+    },
+    "aad_admin_objectid": {
+      "value": "f8964c10-03fd-4d53-b7b5-fe6669eab383"
+    },
+    "aad_admin_type": {
+      "value": "Application"
+    },
+    "db_tier": {
+      "value": "Standard"
+    },
+    "aad_only_auth": {
+      "value": true
+    },
+    "storname": {
+      "value": "sqlvaxua6mmvephvog"
+    },
+    "keyVaultName": {
+      "value": "SecuremeGod"
+    },
+    "keyVaultResourceGroupName": {
+      "value": "ProjectSQL"
+    },
+    "keyName": {
+      "value": "Unlockme"
+    },
+    "keyVersion": {
+      "value": "4aae2bc68caa475d86fa44d0fa2f424f"
+    }
+  }
+}

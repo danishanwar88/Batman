@@ -1,0 +1,249 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "sqlServerName": {
+      "type": "string",
+      "defaultValue": "[uniqueString('sql', resourceGroup().id)]",
+      "metadata": {
+        "description": "Azure SQL server name to create"
+      }
+    },
+    "keyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "Key vault name where the key to use is stored"
+      }
+    },
+    "keyVaultResourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Key vault resource group name where it is stored"
+      }
+    },
+    "keyName": {
+      "type": "string",
+      "metadata": {
+        "description": "Key name in the key vault to use as encryption protector"
+      }
+    },
+    "keyVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "Version of the key in the key vault to use as encryption protector"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    },
+    "storname": {
+      "type": "String",
+      "metadata": {
+        "description": "storage account name passed"
+      }
+    },
+    "aad_admin_name": {
+      "type": "String",
+      "metadata": {
+        "description": "The name of the Azure AD admin for the SQL server."
+      }
+    },
+    "aad_admin_objectid": {
+      "type": "String",
+      "defaultValue": "123-123-123-123",
+      "metadata": {
+        "description": "The Object ID of the Azure AD admin."
+      }
+    },
+    "aad_admin_tenantid": {
+      "type": "String",
+      "defaultValue": "[subscription().tenantId]",
+      "metadata": {
+        "description": "The Tenant ID of the Azure Active Directory"
+      }
+    },
+
+      "db_tier": {
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Standard",
+        "BusinessCritical",
+        "Premium"
+      ],
+      "type": "String"
+    },
+
+    "aad_admin_type": {
+      "defaultValue": "Application",
+      "allowedValues": [
+        "User",
+        "Group",
+        "Application"
+      ],
+      "type": "String"
+    },
+    "aad_only_auth": {
+      "defaultValue": true,
+      "type": "Bool"
+    }
+  },
+  "variables": {
+    "sqlServerKeyName": "[concat(parameters('keyVaultName'), '_', parameters('keyName'), '_', parameters('keyVersion'))]",
+    "storagename": "[parameters('storname')]"
+  },
+  "resources": [
+    {
+
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-06-01",
+      "name": "[variables('storagename')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+      ],
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": true
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2020-11-01-preview",
+      "name": "[parameters('sqlServerName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "administrators": {
+          "login": "[parameters('aad_admin_name')]",
+          "sid": "[parameters('aad_admin_objectid')]",
+          "tenantId": "[parameters('aad_admin_tenantid')]",
+          "principalType": "[parameters('aad_admin_type')]",
+          "azureADOnlyAuthentication": "[parameters('aad_only_auth')]"
+        }
+      }
+    },
+
+
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-06-01",
+      "name": "addAccessPolicy",
+      "resourceGroup": "[parameters('keyVaultResourceGroupName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults/accessPolicies",
+              "name": "[concat(parameters('keyVaultName'), '/add')]",
+              "apiVersion": "2019-09-01",
+              "properties": {
+                "accessPolicies": [
+                  {
+                    "tenantId": "[subscription().tenantId]",
+                    "objectId": "[reference(resourceId('Microsoft.Sql/servers/', parameters('sqlServerName')), '2019-06-01-preview', 'Full').identity.principalId]",
+                    "permissions": {
+                      "keys": [
+                        "get",
+                        "wrapKey",
+                        "unwrapKey"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "[concat(parameters('sqlServerName'), '/', variables('sqlServerKeyName'))]",
+      "type": "Microsoft.Sql/servers/keys",
+      "apiVersion": "2020-02-02-preview",
+      "dependsOn": [
+        "addAccessPolicy",
+        "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+      ],
+      "properties": {
+        "serverKeyType": "AzureKeyVault",
+        "uri": "[concat(reference(resourceId(parameters('keyVaultResourceGroupName'), 'Microsoft.KeyVault/vaults/', parameters('keyVaultName')), '2018-02-14-preview', 'Full').properties.vaultUri, 'keys/', parameters('keyName'), '/', parameters('keyVersion'))]"
+      }
+    },
+    {
+      "name": "[concat(parameters('sqlServerName'), '/current')]",
+      "type": "Microsoft.Sql/servers/encryptionProtector",
+      "apiVersion": "2020-02-02-preview",
+      "kind": "azurekeyvault",
+      "dependsOn": [
+        "[resourceId('Microsoft.SQL/servers/keys', parameters('sqlServerName'), variables('sqlServerKeyName'))]"
+      ],
+      "properties": {
+        "serverKeyName": "[variables('sqlServerKeyName')]",
+        "serverKeyType": "AzureKeyVault"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/securityAlertPolicies",
+      "apiVersion": "2020-02-02-preview",
+      "name": "[concat(parameters('sqlServerName'), '/Default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+      ],
+      "properties": {
+        "state": "Enabled",
+        "emailAccountAdmins": false
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2021-05-01-preview",
+      "name": "[concat(parameters('sqlServerName'), '/DB')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "[parameters('db_tier')]"
+      },
+      "Properties": {
+        "highAvailabilityReplicaCount": 3
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Sql/servers/vulnerabilityAssessments",
+      "apiVersion": "2020-02-02-preview",
+      "name": "[concat(parameters('sqlServerName'), '/VA')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storagename'))]",
+        "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+      ],
+      "properties": {
+        "recurringScans": {
+          "emails": [],
+          "emailSubscriptionAdmins": false,
+          "isEnabled": true
+        },
+        "storageContainerPath": "[concat('https://',variables('storagename'),'.blob.core.windows.net/vulnerability-assessment/')]"
+      }
+    }
+
+
+  ]
+}

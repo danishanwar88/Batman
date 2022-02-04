@@ -1,0 +1,99 @@
+Assignment:
+Create PowerShell deployment scripts, with ARM templates and default ARM template parameters files, to deploy the Azure resources listed below in a secure manner to an Azure Resource Group:
+ ===============================================================================================================
+Azure SQL Server
+
+With Azure AD-only authentication enabled
+With Transparent Data Encryption enabled, using a Customer-Managed Key
+With Vulnerability Assessment enabled
+ 
+
+The deployment PowerShell script must accept input, and must verify the following:
+
+Azure AD security principal
+Storage Account
+ ===============================================================================================================
+
+Azure SQL Database
+
+With optional secondary replicas for high availability
+With Transparent Data Encryption enabled
+ 
+
+The deployment PowerShell script must accept input, and must accept only Premium, General Purpose, and Business Critical service tiers
+ ===============================================================================================================
+ 
+01-02-2022 5:35PM - Reading the Assignment
+01-02-2022 5:45PM - Breadking the tasks
+
+1. Research over the SQL Server with TDE and VA and AAD auth 
+Ref researched & used - 
+https://docs.microsoft.com/en-us/azure/templates/microsoft.sql/servers?tabs=json
+https://docs.microsoft.com/en-us/azure/templates/microsoft.sql/servers/azureadonlyauthentications?tabs=json
+https://docs.microsoft.com/en-us/azure/templates/microsoft.sql/servers/vulnerabilityassessments?tabs=json
+https://docs.microsoft.com/en-us/azure/templates/microsoft.sql/servers/keys?tabs=json
+https://www.sqlshack.com/tde-customer-managed-keys-in-azure-sql-database/
+
+Only read and checked dependencies
+
+01-02-2022 6:20PM - Done for the day
+
+02-02-2022 5:15PM - Started again
+Setting up Lab1 - Pre-requiste are not provided in the code as they are supposed to be available. Used basic template to shoot.
+
+- Deployed KV with perge protection and soft delete enabled - pre-requiste for Azure SQL TDE with CSK (Nice update later included
+in ARM to updated the KV get,wrap,unwrap automated)
+- Deployed Storage account - Pre-requiste for VA
+- Drafted function and deployment logic to update JSON with user input of SPN ID and Storage account name
+- Drafted a check if ID's exist (Can be better will look later on specially checking SPN)
+- Also researched over few things which is giving issue... KV template API updated,etc.
+
+02-02-2022 7:10:00 - Closing for today, Wife clearly not happy seeing me sitting back behind the screen back to back days
+If(!$wife == "Angry")
+{
+    Write-Host "    - Keep coding..."
+}
+Else
+{
+    Write-Host "     - Screw the code and go help her in work..."
+}
+
+03-02-2022 4:15PM - Started again.
+
+    - Updated ARM with SQL server deploy
+    - Updated Azure AD auth
+    - Updated TDE with CMK
+
+03-02-2022 7:45PM - Stopping but have to resume as personal deadline set by family is 04-Feb-2022 EOD :(
+03-02-2022 9:20PM - Started
+
+    - Task 1 almost completed but moving to task 2 to get the gist
+    - Reasing over task 2
+
+Ref 
+- https://docs.microsoft.com/en-us/azure/templates/microsoft.sql/servers/databases?tabs=json
+- https://docs.microsoft.com/en-us/azure/templates/microsoft.sql/servers/databases/transparentdataencryption?tabs=json
+- https://docs.microsoft.com/en-us/azure/templates/microsoft.sql/servers/databases/vulnerabilityassessments?tabs=json
+
+03-02-2022 11:00PM - done for the day
+
+04-02-2022 7:00 AM - Have to do it Larry today is personal deadline
+
+    - Updated tasked 1 VA got it working
+    - Updated same ARM with DB and TDE got it working
+    - replica not tested however included in code "highAvailabilityReplicaCount"
+
+Finally tested and got deployment completed
+
+Have to stop it personal deadline reached 
+
+Closed 04-02-2022 8:45AM.
+
+Ya, I was planning to include more but time doesn't permit it like connect-azure,etc. (But to show same aspect JSON convert function is created and used)
+Planned to have parameter file generated at run time but time again. To show did that also for storage and SPN name to go into JSON
+Planned to secure the VM with FW rules etc.
+
+But This is what it is. Now I am on Leave on Monday and Tuesday have office and this is the deadline ;)
+
+
+
